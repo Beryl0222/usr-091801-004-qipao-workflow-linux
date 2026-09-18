@@ -1,8 +1,16 @@
-"""跨文化旗袍定制流转的基础运行入口。"""
+"""跨文化旗袍定制流转的运行入口。
+
+- python3 service.py --check           检查服务身份与领域装配
+- python3 service.py --port 8000       启动 HTTP 服务（含样例门店/人员/工艺目录）
+"""
 
 import argparse
 import json
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import ThreadingHTTPServer
+
+from domain.app import Application
+from domain.httpapi import make_handler
+from domain.samples import build_directory
 
 SERVICE_ID = "qipao-workflow"
 SERVICE_NAME = "跨文化旗袍定制流转"
@@ -13,22 +21,13 @@ def health_payload():
     return {"status": "ok", "service": SERVICE_ID, "name": SERVICE_NAME}
 
 
-class Handler(BaseHTTPRequestHandler):
-    """处理基础健康请求。"""
+def build_app():
+    """装配应用：样例目录 + 内存事件存储。"""
+    return Application(build_directory())
 
-    def do_GET(self):
-        if self.path != "/health":
-            self.send_error(404)
-            return
-        body = json.dumps(health_payload(), ensure_ascii=False).encode()
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
 
-    def log_message(self, *_args):
-        return
+# 向后兼容：旧契约测试 from service import Handler
+Handler = make_handler(build_app())
 
 
 def main():
@@ -38,7 +37,11 @@ def main():
     args = parser.parse_args()
     if args.check:
         assert health_payload()["name"] == SERVICE_NAME
-        print("基础检查通过")
+        app = build_app()
+        directory = app.directory_public()
+        assert len(directory["stores"]) == 2, "应装配两家伦敦门店"
+        assert {"suxiu", "xiangxiu"} <= set(directory["crafts"]), "应包含苏绣与湘绣工艺"
+        print("基础检查通过：两家门店、苏绣/湘绣工艺与角色目录已装配")
         return
     ThreadingHTTPServer(("0.0.0.0", args.port), Handler).serve_forever()
 
