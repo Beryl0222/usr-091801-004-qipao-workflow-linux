@@ -1,8 +1,8 @@
 {
-  "name": "service-baseline",
+  "name": "qipao-workflow",
   "private": true,
   "scripts": {
-    "test": "node test_service.js"
+    "test": "node test_service.js",
+    "test:all": "python3 -m unittest discover -s tests && python3 -m unittest service_contract"
   }
 }
-

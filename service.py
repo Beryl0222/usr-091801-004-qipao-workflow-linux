@@ -1,34 +1,19 @@
-"""跨文化旗袍定制流转的基础运行入口。"""
+"""服务运行入口：复用 qipao 包，保留基线 --check/--port 与 /health 契约。"""
 
 import argparse
-import json
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import ThreadingHTTPServer
 
-SERVICE_ID = "qipao-workflow"
-SERVICE_NAME = "跨文化旗袍定制流转"
+from qipao.http_api import (
+    SERVICE_ID,
+    SERVICE_NAME,
+    build_service,
+    health_payload,
+    make_handler,
+)
 
-
-def health_payload():
-    """构造健康检查数据。"""
-    return {"status": "ok", "service": SERVICE_ID, "name": SERVICE_NAME}
-
-
-class Handler(BaseHTTPRequestHandler):
-    """处理基础健康请求。"""
-
-    def do_GET(self):
-        if self.path != "/health":
-            self.send_error(404)
-            return
-        body = json.dumps(health_payload(), ensure_ascii=False).encode()
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
-
-    def log_message(self, *_args):
-        return
+# 基线契约（service_contract.py）按模块级名字导入
+service = build_service()
+Handler = make_handler(service)
 
 
 def main():

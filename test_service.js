@@ -2,15 +2,22 @@
 
 const { spawnSync } = require("node:child_process");
 
-const result = spawnSync(
-  "python3",
-  ["-m", "unittest", "-v", "service_contract"],
-  { stdio: "inherit" },
-);
+// 先跑领域验收测试（tests/ 下全部用例），再跑基线服务契约
+const runs = [
+  ["python3", ["-m", "unittest", "discover", "-s", "tests"]],
+  ["python3", ["-m", "unittest", "-v", "service_contract"]],
+];
 
-if (result.error) {
-  console.error(result.error.message);
-  process.exit(1);
+let failed = false;
+for (const [cmd, args] of runs) {
+  const result = spawnSync(cmd, args, { stdio: "inherit" });
+  if (result.error) {
+    console.error(result.error.message);
+    process.exit(1);
+  }
+  if (result.status !== 0) {
+    failed = true;
+    break;
+  }
 }
-process.exit(result.status ?? 1);
-
+process.exit(failed ? 1 : 0);
